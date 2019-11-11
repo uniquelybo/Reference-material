@@ -1,0 +1,83 @@
+# 检测ip
+# 免费代理或不用密码的代理
+url = 'http://httpbin.org/get'
+
+proxy = '127.0.0.0:8000'
+
+proxies = {
+    'http': 'http://' + proxy,
+    'https': 'https://' + proxy,
+}
+
+response = requests.get(url, proxies=proxies, verify=False)
+print(response.text)
+
+# 付费代理和加密代理
+url = 'http://httpbin.org/get'
+
+proxy_host = '127.0.0.0'
+proxy_port = '8000'
+
+proxy_user = 'root'
+proxy_pass = 'root'
+
+proxy_meta = 'http://%(user)s:%(pass)s@%(host)s:%(port)s' % {
+    'host': proxy_host,
+    'port': proxy_port,
+    'user': proxy_user,
+    'pass': proxy_pass,
+}
+
+proxies = {
+    'http': proxy_meta,
+    'https': proxy_meta,
+}
+
+response = requests.get(url, proxies=proxies)
+print(response.text)
+
+
+# 方法一:利用meta函数进行携带即可访问
+# scrapy爬虫代码中:
+
+import scrapy
+
+class ProxySpider(scrapy.Spider):
+    name = 'proxy'
+    allowed_domains = ["httpbin.org"]
+
+    def start_requests(self):
+        url = 'http://httpbin.org/get'
+        proxy = '127.0.0.0:8000'
+
+        proxies = ""
+        if url.startswith("http://"):
+            proxies = "http://"+str(proxy)
+        elif url.startswith("https://"):
+            proxies = "https://"+str(proxy)
+
+        # 注意这里面的meta={'proxy':proxies},一定要是proxy进行携带,其它的不行,后面的proxies一定 要是字符串,其它任何形式都不行
+        yield scrapy.Request(url, callback=self.parse,meta={'proxy':proxies})
+
+    def parse(self,response):
+        print(response.text)
+
+
+
+# 方法二:利用middlewares中间件进行
+# 1.在middlewares.py问件中添加如下代码
+
+#配置代理
+class ProxyMiddleware(object):
+    def process_request(self,request,spider):
+        if request.url.startswith("http://"):
+            request.meta['proxy']="http://"+'127.0.0.0:8000'          # http代理
+        elif request.url.startswith("https://"):
+            request.meta['proxy']="https://"+'127.0.0.0:8000'         # https代理
+
+# 2.在settings.py文件中添加配置
+# Enable or disable downloader middlewares
+# See https://doc.scrapy.org/en/latest/topics/downloader-middleware.html
+DOWNLOADER_MIDDLEWARES = {
+   'biquge.middlewares.ProxyMiddleware': 100,  
+}
